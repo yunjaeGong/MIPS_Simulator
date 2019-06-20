@@ -35,7 +35,6 @@
 #define MFHI 0
 #define MFLO 2
 
-
 // I Type
 // UPPER
 #define JUMP_OR_BRANCH 0
@@ -59,6 +58,11 @@
 #define ORI 5
 #define XORI 6
 #define LUI 7
+#define LB 0
+#define LW 3
+#define LBU 4
+#define SB 0
+#define SW 3
 
 extern char* CPU_REG[32]; // list of cpu register
 

@@ -47,7 +47,7 @@ unsigned get_Instruction(unsigned adr, int offset) {
     IR.INST = getMemory(adr,WORD); // Fetch an Instruction from memory address adr
     char* name = NULL;
     unsigned ret;
-
+    int size;
     // ALU
     int X, C, Z;
     // Flow control
@@ -57,9 +57,9 @@ unsigned get_Instruction(unsigned adr, int offset) {
     unsigned nAdr;
 
     unsigned   IR_R_FN_LOWER = IR.R.fn & (unsigned)LOWER,
-                IR_R_FN_UPPER = (IR.R.fn & (unsigned)UPPER)>>(unsigned)3,
-                IR_I_OP_LOWER = IR.I.op & (unsigned)LOWER,
-                IR_I_OP_UPPER = (IR.I.op & (unsigned)UPPER)>>(unsigned)3;
+            IR_R_FN_UPPER = (IR.R.fn & (unsigned)UPPER)>>(unsigned)3,
+            IR_I_OP_LOWER = IR.I.op & (unsigned)LOWER,
+            IR_I_OP_UPPER = (IR.I.op & (unsigned)UPPER)>>(unsigned)3;
 
     // Instruction names
     if(IR.R.op == 0) { // R_Type Instructions
@@ -122,7 +122,7 @@ unsigned get_Instruction(unsigned adr, int offset) {
                 switch(IR_R_FN_LOWER) {
                     case MFHI: setRegister(IR.R.rs,HI); break;
                     case MFLO: setRegister(IR.R.rs,LO); break;
-                    default: printf("Undefined control: Move\n"); return -1;
+                    default: printf("Undefined MOVE control: Move\n"); return -1;
                 }
                 printf("%s %s", name, CPU_REG[IR.R.rd]);
                 break;
@@ -208,8 +208,11 @@ unsigned get_Instruction(unsigned adr, int offset) {
                 switch(IR_I_OP_LOWER) {
                     case BLTZ:
                         C = ALU_CTRL_SLT;
-                        if(ALU(IR.I.immi, 0, C, &Z, NULL))
-
+                        nPC = PC + (IR.I.immi << 2);
+                        if(ALU(IR.I.immi, 0, C, &Z, NULL)) { // 0보다 작으면 1
+                            setRegister($ra, PC); // set current PC to $ra
+                            PC = nPC; // Branch to new PC
+                        }
                         printf("%s %s, %d", name, CPU_REG[IR.I.rs], IR.I.immi);
                         break; // end of BLTZ
 
@@ -275,18 +278,29 @@ unsigned get_Instruction(unsigned adr, int offset) {
                 nAdr = ALU(X,Y,ALU_CTRL_ADD,&Z,NULL); // nAdr = $rs + offset
 
                 if(IR_I_OP_UPPER == LOAD) { // if LOAD
-                    ret = getMemory(nAdr,WORD);  //ret = MEM[nAdr]
+                    switch(IR_I_OP_LOWER) {
+                        case LB: size = BYTE; break; // Sign extention required?
+                        case LW: size = WORD; break;
+                        case LBU: size = BYTE; break;
+                        default: printf("Undefined Load Control: LOAD\n"); return -1;
+                    }
+                    ret = getMemory(nAdr,size);  //ret = MEM[nAdr]
                     setRegister(IR.I.rt,ret);  // $rt = MEM[$rs + offset]
 
                 }else if(IR_I_OP_UPPER == STORE) { // if STORE
+                    switch(IR_I_OP_LOWER) {
+                        case SB: size = BYTE; break;
+                        case LW: size = WORD; break;
+                        default: printf("Undefined Store Control: STORE\n"); return -1;
+                    }
                     ret = getRegister(IR.I.rt); // ret = $rt
                     // MEM(nAdr,ret,WRITE,WORD);  // MEM[$s + offset] = $t
-                    setMemory(nAdr,ret,WORD);
+                    setMemory(nAdr,ret,size);
                 }
                 printf("%s %s, %d(%s)", name, CPU_REG[IR.R.rt], IR.I.immi, CPU_REG[IR.R.rs]);
                 break;
             default: printf("I-type op:%d Not on the Instruction Table!",IR.I.op); return -1;
-            // end of LOAD STORE
+                // end of LOAD STORE
         }
         printf("\n");
     }

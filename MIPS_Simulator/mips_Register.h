@@ -1,8 +1,6 @@
 #ifndef _WEEK10_REGISTERS_MIPS_MEMORY_H
 #define _WEEK10_REGISTERS_MIPS_MEMORY_H
 
-
-
 #define READ 0
 #define WRITE 1
 #define REG_MAX 32
